@@ -1,0 +1,7 @@
+{% extends 'error.html' %}
+
+{% block head_title %}404 Error{% endblock %}
+
+{% block error_content %}
+	<p class="lead">It seems that you have tried to access a page that does not exist.  Would you like to <a href="{% url "home" %}">try that again?</a></p>
+{% endblock %}

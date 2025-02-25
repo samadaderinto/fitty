@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% load apptags %}
+{% load humanize %}
+{% load staticfiles %}
+
+{% block head_title %}{{ challenge.name }} : {% accounting challenge challenge.accountingType user True%} : Exercise Challenge{% endblock %}
+
+{% block ng_app %}challenge{% endblock %}
+
+{% block body_class %}challenge{% endblock %}
+
+{% block head_misc %}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{ request.build_absolute_uri }}" />
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+    <meta property="og:title" content="{{ challenge.name }} | Fit Crown" />
+	{% if isFootRace %}
+    	<meta property="og:image" content="{{ request|hostUrl }}/static/img/running.jpg" />
+	{% else %}
+		<meta property="og:image" content="{{ request|hostUrl }}/static/img/riding.jpg" />
+	{% endif %}
+{% endblock %}
+
+{% block content %}
+	<div class="challenge-details" ng-controller="challenge-controller">
+		<div class="page-header clearfix">
+			<h2 class="challenge-title {{ challenge.coreActivity }}">{{ challenge.name }}</h2>
+		</div>
+
+		<p class="lead">
+			{% if not challenge.hasStarted %}
+				This Challenge will start in {{ challenge.startdate|timeuntil }}.
+			{% elif challenge.hasEnded %}
+				This Challenge ended {{ challenge.enddate|timesince }} ago.
+				{% if challenge.reconciled and challenge.disbursementAmount > 0 %}
+					<strong>{{ challenge.numWinners }} player{{ challenge.numWinners|pluralize }} won ${{ challenge.disbursementAmount|floatformat:"-2" }}{{ challenge.numWinners|pluralize:" each" }}.</strong>
+				{% endif %}
+			{% else%}
+				<span data-waters="countdown" data-targetdate="{{ challenge.enddate|fullDate }}" data-numberpadding="1">
+					This Challenge is under way, there's <span class="days-value"></span> Days, <span class="hours-value"></span> Hours, <span class="minutes-value"></span> Minutes and <span class="seconds-value"></span> Seconds left!
+				</span>
+			{% endif %}
+		</p>
+
+		<h4>Challenge Details</h4>
+		<div class="challenge-header">
+			<div class="row">
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					<div class="challenge-label">{{ challenge.get_accountingType_display }}</div>
+					<div class="challenge-value">{% accounting challenge challenge.accountingType user True%}</div>
+				</div>
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					<div class="challenge-label">Duration</div>
+					<div class="challenge-value">{{ challenge.numDays }} Day{{ challenge.numDays|pluralize }}</div>
+				</div>
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					{% if not challenge.hasStarted %}
+						<div class="challenge-label">Starts on</div>
+						<div class="challenge-value">{{ challenge.startdate|date:"l, N j" }}</div>
+					{% elif not challenge.hasEnded %}
+						<div class="challenge-label">Ends on</div>
+						<div class="challenge-value">{{ challenge.enddate|date:"l, N j" }}</div>
+					{% else %}
+						<div class="challenge-label">Ended on</div>
+						<div class="challenge-value">{{ challenge.enddate|date:"N j, y" }}</div>
+					{% endif %}
+				</div>
+
+				{% if challenge.ante > 0 %}
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					<div class="challenge-label">Bet</div>
+					<div class="challenge-value">${{ challenge.ante|floatformat:"-2"|intcomma }}</div>
+				</div>
+				{%  endif %}
+
+				{% if challenge.moneyInThePot > 0 %}
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					<div class="challenge-label">In the pot</div>
+					<div class="challenge-value">${{ challenge.moneyInThePot|floatformat:"-2"|intcomma }}</div>
+				</div>
+				{% endif %}
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					<div class="challenge-label">Players</div>
+					<div class="challenge-value">{{ challenge.numPlayers }}</div>
+				</div>
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					<div class="challenge-label">Type</div>
+					<div class="challenge-value">
+						{% if challenge.isTypeIndividual %}
+							<i class="fa fa-user"></i> Individual
+						{% elif challenge.isTypeTeam %}
+							<i class="fa fa-users"></i> Team
+						{% endif %}
+					</div>
+				</div>
+				<div class="challenge-info col-lg-3 col-sm-3 col-xs-6">
+					<div class="challenge-label">Style</div>
+					<div class="challenge-value">
+						{% if challenge.isStyleAllCanWin %}
+							All Can Win
+						{% elif challenge.isStyleWinnerTakesAll %}
+							Winner Takes All
+						{% endif %}
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<p class="lead">{{ challenge.description|safe }}</p>
+
+		{% include "inclusions/player_email.html" %}
+
+		{% if canJoin %}
+			{% if user.is_authenticated %}
+				{% if challenge.isTypeTeam %}
+					<div class="btn-group vertical-padding " dropdown is-open="ui.dropdownOpen">
+						<button type="button" class="btn btn-primary btn-lg dropdown-toggle">
+							Join this Challenge <span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							{% for team in open_teams %}
+								<li><a href ng-click="joinTeam({{ team.id }})">Join "{{ team.name }}"</a></li>
+							{% endfor %}
+							{% if open_teams|length > 0 %}
+								<li role="presentation" class="divider"></li>
+							{% endif %}
+							<li><a href ng-click="joinTeam(-1)">Start a new Team</a></li>
+						</ul>
+					</div>
+				{% else %}
+					<button type="button" ng-click="joinChallenge()" class="join-challenge vertical-padding btn btn-primary btn-lg" type="button" title="This challenge is open to join until {{ challenge.lastPossibleJoinDate|naturalday }}.">Join this Challenge</button>
+				{% endif %}
+			{% else %}
+				<a class="vertical-padding btn btn-primary btn-lg" href="#loginModal" data-toggle="modal" title="Sign In">Sign In to Play</a>
+			{% endif %}
+		{% elif canSwitchTeams %}
+			<div class="btn-group vertical-padding " dropdown is-open="ui.dropdownOpen">
+				<button type="button" class="btn btn-primary btn-lg dropdown-toggle">
+					Switch  to a different team <span class="caret"></span>
+				</button>
+				<ul class="dropdown-menu" role="menu">
+					{% for team in open_teams %}
+						<li><a href ng-click="joinTeam({{ team.id }})" class="join-team">Switch to "{{ team.name }}"</a></li>
+					{% endfor %}
+					{% if open_teams|length > 0 %}
+						<li role="presentation" class="divider"></li>
+					{% endif %}
+					<li><a href ng-click="joinTeam(-1)" class="create-team">Start a new Team</a></li>
+					<li role="presentation" class="divider"></li>
+					<li><a href ng-click="withdrawChallenge()" class="withdraw-challenge">Withdraw from this challenge.</a></li>
+				</ul>
+			</div>
+		{% endif %}
+
+		{% if canWithdraw %}
+			<p><small>Having second thoughts?  You can <a href ng-click="withdrawChallenge()" class="withdraw-challenge">withdraw</a> any time before the challenge begins.</small></p>
+		{% endif %}
+
+		{% if show_social %}
+			{% include "inclusions/social.html" %}
+		{% endif %}
+
+		{% if recentActivitiesWithoutEvidence|length > 0 %}
+			<div class="alert alert-info" role="alert">
+			<strong>You have {{ recentActivitiesWithoutEvidence|length }} recent activit{{ recentActivitiesWithoutEvidence|length|pluralize:'y,ies' }} that needs evidence to count:</strong>
+			<ul>
+				{% for activity in recentActivitiesWithoutEvidence %}
+					<li data-id="{{ activity.id }}">
+						{{ activity.type.name }}, {% accounting activity.distance challenge.accountingType user True %}, {{ activity.duration|duration }}
+							<span>
+								<input name="activity-image" type="file">
+								<i title="Upload Image" class="fa fa-upload upload-activity-image"></i>
+							</span>
+					</li>
+				{% endfor %}
+			</ul>
+			</div>
+		{% endif %}
+	</div>
+
+	<div class="tabbable">
+		<ul class="nav nav-tabs nav-justified" id="challenge_tabs">
+			<li class="active"><a href="#leaderboard" data-toggle="tab">Leaderboard</a> </li>
+			{% if not challenge.hasEnded and recentActivities|length > 0 %}
+				<li><a href="#recent-activity" data-toggle="tab">Recent Activity</a></li>
+			{% endif %}
+			<li><a href="#disqus" data-toggle="tab">Discussion</a></li>
+		</ul>
+		<div class="tab-content">
+			<div class="tab-pane active" id="leaderboard">
+				{% if "DISQUS_SHORTNAME"|fromSettings %}
+					<div class="bottom-padding">
+						<a id="disqus_count" href="#disqus_thread" data-disqus-identifier="{{ disqus_identifier }}">&nbsp;</a>
+					</div>
+				{% endif %}
+
+				{% if numPlayers > 0 or teams|length > 0 %}
+					<table class="table table-striped leaderboard">
+						<thead>
+							<tr>
+								<th class="rank-column"></th>
+								<th class="avatar-column"></th>
+								<th></th>
+								<th class="miles-column">{{ challenge.get_accountingType_display }}</th>
+							</tr>
+						</thead>
+						<tbody>
+						{% if challenge.isTypeTeam %}
+							{% for team in teams %}
+								<tr class="team">
+									<td colspan="3">
+										<span class="name">{{ team.name }}</span>
+										<span class="team-rank">{{ forloop.counter|ordinal }} Place</span>
+									</td>
+									<td><a href="#" class="popover-link team-total-link" data-toggle="popover" data-html="true" data-trigger="manual" data-placement="left" data-title="{{ team.name }}" data-container="body" data-content='{% spaceless %}
+									<table class="table table-condensed no-margin-bottom">
+										<tr><td>Total {{ challenge.accountingType }}</td><td>{% accounting_team team challenge.accountingType user %}</td></tr>
+										<tr><td>Average {{ challenge.accountingType }}</td><td>{% accounting_team team challenge.accountingType user True %}</td></tr>
+									</table>
+									{% endspaceless %}'>{% accounting_team team challenge.accountingType user True %}</a></td>
+								</tr>
+								{% for player in team.getMembersWithActivities %}
+									{% player_row user player challenge forloop.counter %}
+								{% endfor %}
+							{% endfor %}
+						{% elif challenge.isTypeIndividual %}
+							{% for player in players %}
+								{% player_row user player challenge forloop.counter %}
+							{% endfor %}
+						{% endif %}
+						</tbody>
+					</table>
+					<ul class="list-inline">
+						<li><i class="fa fa-heart red" title="Active today"></i> &mdash; Active today.</li>
+						<li><i class="fa fa-trophy"></i> &mdash; Achieved the goal.</li>
+						<li><i class="fa fa-star bronze"></i> &mdash; Achieved 1.5 times the goal.</li>
+						<li><i class="fa fa-star silver"></i> &mdash; Doubled the goal distance.</li>
+						<li><i class="fa fa-star gold"></i> &mdash; Tripled the goal distance.</li>
+					</ul>
+				{% else %}
+					<p>
+						This challenge is now open to join.  You could be the first!
+					</p>
+				{% endif %}
+			</div>
+			{% if not challenge.hasEnded and recentActivities|length > 0 %}
+				<div class="tab-pane" id="recent-activity">
+					<ul class="list-unstyled">
+						{% for activity in recentActivities %}
+							<li class="bottom-padding">
+								<a href="{% url "user_details" activity.user.id %}">{{ activity.user.fullname }}</a> {{ activity.type.name|pastTense }} {% accounting activity 'distance' user %}.
+								{% if activity.photo %}
+									<a href="{{ activity.photo.url }}" target="_blank"><i title="View Image" class="fa fa-picture-o show-activity-image"></i></a>
+								{% endif %}
+								<div class="dimmed-text">{{ activity.date|naturaltime|capfirst }} </div>
+							</li>
+						{% endfor %}
+					</ul>
+				</div>
+			{% endif %}
+			<div class="tab-pane" id="disqus">
+				{% if "DISQUS_SHORTNAME"|fromSettings %}
+					<div id="disqus_thread"></div>
+					<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+					<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+				{% else %}
+					DISQUS not available.
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+	<br /><br />
+	<div class="fb-like" data-href="https://www.facebook.com/fitcrown" data-layout="standard" data-action="like" data-show-faces="true" data-share="false" data-width="300"></div>
+	<br /><br />
+
+
+	{% aggregate inline_javascript %}
+		<script type="text/javascript">
+			(function() {
+				"use strict";
+				var challenge = {{ challenge|serialize:"ChallengeSerializer" }};
+
+				var challengeApp = angular.module('challenge', ['api', 'modals', 'ui.bootstrap']);
+
+				challengeApp.controller('challenge-controller', ['$scope', 'CustomAction', 'modalFactory', function($scope, CustomAction, modalFactory) {
+					$scope.ui = {
+						dropdownOpen: false
+					};
+
+					var isCompetitor = function() {
+						return {{ isCompetitor|yesno:'true,false' }};
+					}
+
+					var canAfford = function() {
+						return isCompetitor() || parseFloat(FC.account.balance) >= parseFloat(challenge.ante);
+					}
+
+					var promptPayment = function(callback) {
+						if(!canAfford()) {
+
+							var lineItems = [];
+							lineItems.push(modalFactory.createLineItem('"' + challenge.name + '" challenge.', parseFloat(challenge.ante)));
+							if(parseFloat(FC.account.balance) > 0) {
+								lineItems.push(modalFactory.createLineItem('Existing account balance', -1*Math.abs(parseFloat(FC.account.balance))));
+							}
+
+							modalFactory.showPaymentModal(lineItems, function () {
+								callback.apply($scope);
+							});
+
+						}else {
+							callback.apply($scope);
+						}
+					};
+
+					//lame, but required for now.
+					var reloadWindow = function(result) {
+						if(result.data.success) {
+							window.location.reload();
+						}
+					};
+
+					$scope.joinChallenge = function() {
+						$scope.ui.dropdownOpen = false;
+
+						promptPayment(function() {
+							CustomAction.joinChallenge(challenge.id).then(reloadWindow);
+						});
+					};
+
+					$scope.joinTeam = function(teamID) {
+						$scope.ui.dropdownOpen = false;
+
+						promptPayment(function() {
+							if(teamID >= 0) {
+								CustomAction.joinTeam(challenge.id, teamID).then(reloadWindow);
+							}else {
+								CustomAction.createTeam(challenge.id).then(reloadWindow);
+							}
+						});
+					};
+
+					$scope.withdrawChallenge = function() {
+						$scope.ui.dropdownOpen = false;
+
+						CustomAction.withdrawChallenge(challenge.id).then(reloadWindow);
+					};
+				}]);
+
+				function round(value) {
+					return Math.ceil(value * 100) / 100
+				}
+
+				$(".alert").alert();
+				$("[data-toggle=tooltip]").tooltip();
+
+				var hidePopovers = function(list) {
+					$(list).popover('destroy');
+					$(list).removeAttr('data-content');
+					$(list).removeAttr('data-showing-now');
+				};
+
+				$('body').click(function(evt) {
+					if($(evt.target).parents('.popover').length == 0) {
+						hidePopovers($('a.popover-link'));
+					}
+				});
+
+				$('a.team-total-link').popover().click(function(evt) {
+					evt.preventDefault();
+					evt.stopPropagation(evt.target);
+
+					if(($(evt.target).attr('data-showing-now')) != null) {
+						//popup already showing
+						hidePopovers($('a.popover-link'));
+					}else {
+						hidePopovers(_.without($('a.popover-link'), evt.target));
+						$(this).popover('show');
+						$(this).attr('data-showing-now','true');
+					}
+				})
+
+				$('a.activities-link').popover().click(function(evt) {
+					evt.preventDefault();
+					evt.stopPropagation(evt.target);
+
+					if(($(evt.target).attr('data-content')) != null) {
+						//popup already showing
+						hidePopovers($('a.popover-link'));
+					}else {
+						hidePopovers(_.without($('a.popover-link'), evt.target));
+						var url = $(this).data('url');
+						$.get(url, function(result) {
+							$(this).attr('data-content', result);
+							$(this).popover('show');
+						}.bind(this));
+					}
+				});
+
+				$('body').delegate('.show-more-activities', 'click', function(evt) {
+					var link = $(evt.target);
+					$('.activities-list tr.hidden').removeClass('hidden');
+					link.addClass('hidden');
+				});
+
+				$('.btn.settle-up').click(function(evt) {
+					evt.preventDefault();
+					var win = window.open('http://www.paypal.com', '_blank');
+					win.focus();
+				});
+
+				$('.close-callout').click(function(evt) {
+					evt.preventDefault();
+					var $this = $(this),
+							callout = $this.parent('.fc-callout'),
+							calloutid = callout.data('calloutid');
+
+					callout.remove();
+
+					var hiddenCallouts = $.cookie('hidden_callouts') || '';
+
+					hiddenCallouts = hiddenCallouts.length > 0 ? hiddenCallouts.split(',') : [];
+
+					if( hiddenCallouts.indexOf(calloutid) < 0) {
+						hiddenCallouts.push(calloutid);
+					}
+
+					$.cookie('hidden_callouts', hiddenCallouts.join(','));
+				});
+
+				$('.btn-share').click(function(evt) {
+					evt.preventDefault();
+					var $this = $(this),
+							service = $this.data('service');
+
+					if(service === 'twitter') {
+						var tweetBody = 'Compete. Get Fit. Get Paid.  Join "{{ challenge.name }}" with me! {{ request.build_absolute_uri }} #fitcrown';
+						window.open('https://twitter.com/intent/tweet?original_referer={{ request.build_absolute_uri|urlencode }}&text=' + encodeURIComponent(tweetBody), '', 'width=626,height=436')
+					}else if(service === 'facebook') {
+						window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent('{{ request.build_absolute_uri }}'),
+								'facebook-share-dialog',
+								'width=626,height=436');
+					}else if(service === 'google') {
+						window.open('https://plus.google.com/share?url={{ request.build_absolute_uri|urlencode }}', '', 'width=485,height=450')
+					}
+				});
+
+				$('a#disqus_count').click(function(evt) {
+					evt.preventDefault();
+					$('#challenge_tabs a[href="#disqus"]').tab('show');
+				});
+
+				$('.upload-activity-image').click(function() {
+					var $this = $(this);
+
+					$(this).prev('input[type=file]').trigger('click');
+				});
+
+				$('input[name=activity-image]').change(function () {
+					var $this = $(this),
+							file = this.files[0],
+							li = $this.closest('li'),
+							activityID = li.data('id');
+
+					canvasResize(file, {
+						width: 640,
+						quality: 80,
+						callback: function (data, width, height) {
+							var url = "{% url 'activity_upload_photo' '000000' %}".replace(/000000/, activityID.toString());
+							$.ajax({
+								'url': url,
+								'type': 'POST',
+								'data': {
+									'base64image': data,
+									'filename': file.name,
+									'type': file.type
+								}
+							}).done(function(response) {
+								response = JSON.parse(response);
+								if(response.success) {
+									document.location.reload();
+								}
+							});
+						}
+					});
+				});
+
+				{% if "DISQUS_SHORTNAME"|fromSettings %}
+					window.disqus_shortname = '{{ "DISQUS_SHORTNAME"|fromSettings }}';
+					window.disqus_identifier = '{{ disqus_identifier }}';
+
+					(function () {
+						var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+						dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+						(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+
+
+						var s = document.createElement('script'); s.async = true;
+						s.type = 'text/javascript';
+						s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+						(document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+					}());
+				{% endif %}
+			})();
+		</script>
+	{% endaggregate %}
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load apptags %}
+{% load humanize %}
+{% load staticfiles %}
+
+{% block head_title %}Frequently Asked Questions{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h2>Frequently Asked Questions</h2>
+    </div>
+
+    <div class="faq-content">
+        <div class="question">
+            <h3>What's this all about?</h3>
+            <p>Fit Crown makes exercise fun!  It motivates you to be consistent and push yourself to the next level.  It's an exciting (and addicting) way to get fit and stay fit!</p>
+            <p>Simply join a challenge, ante up, and if you complete the challenge, lay claim to your piece of the pot.</p>
+        </div>
+
+
+		<div class="question">
+			<h3>What do I have to do to complete a challenge?</h3>
+			<p>To complete a challenge, each player must:</p>
+			<ul>
+				<li>Put the required ante in the pot.</li>
+				<li>Complete the minimum distance by tracking approved activities with your favorite fitness tracking app.</li>
+				<li>Finish the challenge within the start and end dates specified.</li>
+			</ul>
+		</div>
+
+
+		<div class="question">
+			<h3>What kind of challenges are there?</h3>
+			<p>There are two kinds of challenges: <strong>individual</strong> and <strong>team based</strong>.</p>
+			<p>In an individual challenge, each player is on their own to complete the challenge within the time period.  In team based challenges, players team up and their miles are pooled together to reach the goal.</p>
+			<p>In addition to the kind, each challenge can be one of two styles: <strong>winner takes all</strong> or <strong>all can win</strong>.</p>
+			<p>In a winner-takes-all challenge, the individual or team at the top of the leader board wins the pot.  If a team wins, the pot is distributed evenly between it's members.  In an all-can-win challenge, every player or team that completes the challenge shares the pot evenly at the end.</p>
+		</div>
+
+
+        <div class="question">
+            <h3>How do I track my exercise?</h3>
+            <p>We currently support Runkeeper, Strava, MapMyRun, MapMyRide, MapMyWalk, MapMyHike and MapMyFitness.  Our goal is to support as many different fitness tracking apps as possible.  If you prefer another tracking app, let us know which one!</p>
+        </div>
+
+        <div class="question">
+            <h3>How do I know other competitors aren't cheating?</h3>
+            <p>Players provide evidence for activities they log.  The easiest way to do that is to track activities with the GPS feature of a mobile device.  Photos are also acceptable.  For example, if a machine is used, just attach a photo of the workout summary to the activity.  Activities only count toward a challenge when one of these two forms of evidence exist.</p>
+        </div>
+
+        <div class="question">
+            <h3>Can I count miles done on the elliptical for a challenge?</h3>
+            <p>Only if elliptical is specified as an approved activity for the challenge you join.  Not all challenges are the same.</p>
+        </div>
+
+        <div class="question">
+            <h3>Is this thing legit?</h3>
+            <p>Indeed.  It's a fun way to be motivated to stay active -- with the added perk of making a few bucks if you do.</p>
+        </div>
+
+		<div class="question">
+			<h3>Isn't this gambling?</h3>
+			<p>Absolutely not!  Gambling requires an element of chance, like the roll of a die, or a random spin of a wheel.  Challenges on Fit Crown aren't based on chance, they're based on you!  Whether you win or lose is entirely under your control and is directly correlated to how much time and effort you put in.</p>
+		</div>
+
+        <div class="question">
+            <h3>How do I put money in the pot?</h3>
+            <p>When you join a challenge you will be prompted to add money to the pot using your credit card.  Fit Crown is secure and we never store your credit card information on our servers.</p>
+        </div>
+
+	  	<div class="question">
+            <h3>Are there fees?</h3>
+            <p>Yes, there is a small transaction fee required each time you put money into the pot.  This fee is paid to Stripe (the secure payment processor) to cover the cost of moving funds around.  There are no other fees.</p>
+        </div>
+
+		<div class="question">
+			<h3>How do I get paid?</h3>
+			<p>The pot is distributed to those who achieved the goal at the end of each challenge.  Just check <a href="{% url 'account' %}">your account</a> balance to see how much cash you've got.  You can cash out at any time and we'll send you the funds quickly and securely via PayPal.  No fees.</p>
+		</div>
+        <div class="question">
+            <h3></h3>
+            <p></p>
+        </div>
+    </div>
+
+{% endblock %}

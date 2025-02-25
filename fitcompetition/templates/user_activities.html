@@ -1,0 +1,25 @@
+{% load humanize %}
+
+{% if activities %}
+    <table class="activities-list table table-condensed no-margin-bottom">
+        <thead>
+        <th></th>
+        <th>Date</th>
+        <th>{{ challenge.get_accountingType_display }}</th>
+        </thead>
+        <tbody>
+        {% for activity in activities %}
+            <tr class="{% if forloop.counter > 4 %}hidden{% endif %}">
+                <td><span class="activity-icon {{ activity.type.name|slugify }}"></span></td>
+                <td>{{ activity.date|naturalday:"M j" }}</td>
+                <td>{% accounting activity challenge.accountingType user %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% if activities|length > 4 %}
+        <div><a class="show-more-activities">{{ activities|length|add:"-4" }} more&hellip;</a></div>
+    {% endif %}
+{% else %}
+    No activities logged yet.
+{% endif %}

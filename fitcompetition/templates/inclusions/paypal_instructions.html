@@ -1,0 +1,7 @@
+<p>
+    <ol>
+        <li>Use your PayPal account.</li>
+		<li><span class="label label-danger">IMPORTANT!</span> Specify the payment is for <strong>Friends or Family</strong>.</li>
+        <li>Send at least <strong>{{ user.account.balance|positive|currency }}</strong> to <strong>{{ "PAYPAL_ACCOUNT_EMAIL"|fromSettings }}</strong>.
+    </ol>
+</p>

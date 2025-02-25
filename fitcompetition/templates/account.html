@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load apptags %}
+{% load humanize %}
+{% load staticfiles %}
+
+{% block head_title %}Account Summary{% endblock %}
+
+{% block ng_app %}account{% endblock %}
+
+{% block content %}
+	{% verbatim %}
+		<div ng-controller="account-controller" ng-cloak>
+			<div class="page-header">
+				<h2>Account Summary <small ng-class="{red: account.balance<0}">Balance: {{ account.balance | currency }}</small></h2>
+			</div>
+
+			<alert type="{{alertType}}" ng-show="account.balance != 0">
+				<p>{{ alertMessage }}</p>
+				<div class="good-news top-padding" ng-show="account.balance > 0">
+					<a href="/challenges" class="btn btn-primary">Find a Challenge</a>
+					<button class="btn btn-link" ng-click="openCashOutModal()">Cash Out</button>
+				</div>
+				<div class="bad-news top-padding" ng-show="account.balance < 0">
+					<button class="btn btn-primary" ng-click="openDepositFundsModal()">Settle Up Now</button>
+				</div>
+			</alert>
+
+			<h3>Transactions</h3>
+			<table class="table table-striped">
+				<thead>
+					<th>Date</th>
+					<th>Description</th>
+					<th>Amount</th>
+					<th>Balance</th>
+				</thead>
+				<tbody>
+					<tr ng-repeat="transaction in transactions | orderBy:'date':true">
+						<td title='{{ transaction.date|date:"medium" }}'>{{ transaction.date | date:"shortDate"}}</td>
+						<td>{{ transaction.description }} <i class="fa fa-credit-card" ng-show="transaction.stripeID" title="{{ transaction.stripeID }}"></i></td>
+						<td ng-class="{red: transaction.amount<0}">{{ transaction.amount | currency }}</td>
+						<td ng-class="{red: transaction.balance<0}">{{ transaction.balance | currency }}</td>
+					</tr>
+				</tbody>
+			</table>
+			<pagination class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" total-items="totalTransactions" ng-model="currentPage" items-per-page="maxApiRecords" ng-change="refreshTransactions()"></pagination>
+		</div>
+	{% endverbatim %}
+
+	{% aggregate inline_javascript %}
+	<script type="text/javascript">
+		(function() {
+			"use strict";
+			var accountApp = angular.module('account', ['api', 'directives', 'ui.bootstrap', 'modals']);
+
+			accountApp.controller('account-controller', ['$scope', 'User', 'Transaction', 'Account', 'modalFactory', function($scope, User, Transaction, Account, modalFactory) {
+				$scope.transactions = [];
+				$scope.account = FC.account;
+				$scope.currentPage = 1;
+				$scope.maxApiRecords = 10;
+				$scope.alertType = $scope.account.balance >= 0 ? "info" : 'danger';
+
+				$scope.openCashOutModal = function() {
+					modalFactory.showCashOutModal();
+				};
+
+				$scope.openDepositFundsModal = function() {
+					var lineItems = [];
+					lineItems.push(modalFactory.createLineItem('Balance Payoff Amount', Math.abs($scope.account.balance)));
+
+					modalFactory.showPaymentModal(lineItems, function () {
+						$scope.account = Account.get({id: $scope.account.id});
+						$scope.currentPage = 1;
+						$scope.refreshTransactions();
+					});
+				};
+
+
+				$scope.refreshTransactions = function() {
+
+					Transaction.query({
+						page: $scope.currentPage,
+						page_size: $scope.maxApiRecords
+					}).$promise.then(function(response) {
+						$scope.totalTransactions = response.count;
+						$scope.transactions = response.results
+					});
+
+				};
+
+				$scope.$watch('account', function() {
+					if( $scope.account.balance >= 0) {
+						$scope.alertMessage = "Nice!  You've got a stash of cash.  You can join another challenge or cash out."
+					}else {
+						$scope.alertMessage = "Your account balance is negative!  Don't worry, it's easy to settle up."
+					}
+				});
+
+				$scope.refreshTransactions();
+
+			}]);
+		})();
+	</script>
+	{% endaggregate %}
+
+{% endblock %}
